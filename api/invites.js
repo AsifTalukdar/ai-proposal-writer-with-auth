@@ -21,7 +21,8 @@ export default async function handler(req, res) {
     return res.status(200).end()
   }
 
-  const { action } = req.query
+  const url = new URL(req.url, 'http://localhost')
+  const action = url.searchParams.get('action')
 
   // POST /api/invites?action=validate
   if (req.method === 'POST' && action === 'validate') {
@@ -53,7 +54,7 @@ async function validateInvite(req, res) {
 
   const cleanCode = code.trim().toUpperCase()
 
-  const { data, error } = await supabase
+  const { data, error } = await getSupabase()
     .from('invites')
     .select('id, code, used_count, max_uses, expires_at, is_active')
     .eq('code', cleanCode)
@@ -95,7 +96,7 @@ async function useInvite(req, res) {
   const cleanCode = code.trim().toUpperCase()
 
   // Get current invite
-  const { data: invite, error: fetchError } = await supabase
+  const { data: invite, error: fetchError } = await getSupabase()
     .from('invites')
     .select('id, used_count, max_uses')
     .eq('code', cleanCode)
@@ -109,7 +110,7 @@ async function useInvite(req, res) {
   const shouldDeactivate = newUsedCount >= invite.max_uses
 
   // Update invite
-  const { error: updateError } = await supabase
+  const { error: updateError } = await getSupabase()
     .from('invites')
     .update({
       used_count: newUsedCount,
@@ -139,7 +140,7 @@ async function createInvite(req, res) {
 
   const code = 'PRPSL-' + generateRandomCode(8)
 
-  const { data, error } = await supabase
+  const { data, error } = await getSupabase()
     .from('invites')
     .insert({
       code,

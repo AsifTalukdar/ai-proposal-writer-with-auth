@@ -15,13 +15,13 @@ export const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY)
 export async function signupWithEmail(email, password, fullName, inviteCode) {
   try {
     // 1. Validate invite code first
-    const validateRes = await fetch('/api/invites/validate', {
+    const validateRes = await fetch('/api/invites?action=validate', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ code: inviteCode })
     })
     const validateData = await validateRes.json()
-    
+
     if (!validateData.valid) {
       throw new Error(validateData.message || 'Invalid or expired invite code')
     }
@@ -38,24 +38,15 @@ export async function signupWithEmail(email, password, fullName, inviteCode) {
     if (authError) throw new Error(authError.message)
     if (!authData.user) throw new Error('Signup failed')
 
-    // 3. Create user profile
-    const { error: profileError } = await supabase
-      .from('users')
-      .insert({
-        id: authData.user.id,
-        email,
-        full_name: fullName
-      })
 
-    if (profileError) throw new Error(profileError.message)
 
     // 4. Mark invite as used
-    const useRes = await fetch('/api/invites/use', {
+    const useRes = await fetch('/api/invites?action=use', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ code: inviteCode, user_id: authData.user.id })
     })
-    
+
     if (!useRes.ok) console.warn('Failed to mark invite as used')
 
     // 5. Initialize usage for current month
@@ -129,7 +120,7 @@ export async function handleOAuthCallback(inviteCode = null) {
     if (profileError && profileError.code === 'PGRST116') {
       // Validate invite if provided
       if (inviteCode) {
-        const validateRes = await fetch('/api/invites/validate', {
+        const validateRes = await fetch('/api/invites?action=validate', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ code: inviteCode })
@@ -150,7 +141,7 @@ export async function handleOAuthCallback(inviteCode = null) {
 
       // Mark invite as used
       if (inviteCode) {
-        await fetch('/api/invites/use', {
+        await fetch('/api/invites?action=use', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ code: inviteCode, user_id: session.user.id })
@@ -163,7 +154,7 @@ export async function handleOAuthCallback(inviteCode = null) {
         user_id: session.user.id,
         proposal_count: 0,
         month_year: monthYear
-      }).catch(() => {}) // ignore duplicates
+      }).catch(() => { }) // ignore duplicates
     }
 
     return { user: session.user, error: null }
@@ -216,7 +207,7 @@ export async function getUserUsage(userId) {
       .single()
 
     if (error && error.code !== 'PGRST116') throw new Error(error.message)
-    
+
     return { usage: data || { proposal_count: 0, month_year: monthYear }, error: null }
   } catch (err) {
     return { usage: null, error: err.message }

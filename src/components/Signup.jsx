@@ -19,7 +19,7 @@ export default function Signup() {
     setLoading(true)
 
     try {
-      const res = await fetch('/api/invites/validate', {
+      const res = await fetch('/api/invites?action=validate', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ code: inviteCode.trim() })
