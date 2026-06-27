@@ -1,0 +1,10 @@
+{
+  "rewrites": [
+    { "source": "/api/(.*)", "destination": "/api/$1" },
+    { "source": "/(.*)", "destination": "/" }
+  ],
+  "functions": {
+    "api/generate.js": { "maxDuration": 30 },
+    "api/invites.js": { "maxDuration": 10 }
+  }
+}
