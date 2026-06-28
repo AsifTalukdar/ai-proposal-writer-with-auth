@@ -1,6 +1,8 @@
-import { useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { generateContent } from '../services/ai'
 import { TONES, PROPOSAL_TYPES, MAX_JOB_DESC, COOLDOWN_MS } from '../config/constants'
+import ResumeSkills from './ResumeSkills'                          // ← ADD THIS
+import { supabase } from '../services/auth'                        // ← ADD THIS
 
 export default function ProposalForm({ onGenerated, setLoading, loading }) {
   const [form, setForm] = useState({
@@ -15,6 +17,7 @@ export default function ProposalForm({ onGenerated, setLoading, loading }) {
   const [error, setError] = useState('')
   const [cooldownUntil, setCooldownUntil] = useState(0)
   const [now, setNow] = useState(Date.now())
+  const [accessToken, setAccessToken] = useState(null)             // ← ADD THIS
   const abortRef = useRef(null)
 
   useEffect(() => {
@@ -24,12 +27,31 @@ export default function ProposalForm({ onGenerated, setLoading, loading }) {
 
   useEffect(() => () => abortRef.current?.abort(), [])
 
+  // ── Get access token once on mount so ResumeSkills can call /api/generate ──
+  useEffect(() => {                                                 // ← ADD THIS BLOCK
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      if (session?.access_token) setAccessToken(session.access_token)
+    })
+  }, [])
+
   const remaining = Math.max(0, Math.ceil((cooldownUntil - now) / 1000))
   const inCooldown = cooldownUntil > now
 
   const handleChange = (e) => {
     setForm(prev => ({ ...prev, [e.target.name]: e.target.value }))
   }
+
+  // ── Called when user clicks a skill chip from ResumeSkills ──────────────
+  const handleSkillClick = useCallback((skill) => {               // ← ADD THIS
+    setForm(prev => {
+      const current = prev.skills.trim()
+      // Don't add duplicate
+      if (current.toLowerCase().includes(skill.toLowerCase())) return prev
+      // Append to existing skills with comma separator
+      const updated = current ? `${current}, ${skill}` : skill
+      return { ...prev, skills: updated }
+    })
+  }, [])
 
   const handleSubmit = async (e) => {
     e.preventDefault()
@@ -57,7 +79,7 @@ export default function ProposalForm({ onGenerated, setLoading, loading }) {
 
     try {
       const { content: text, proposalUsage } = await generateContent(form, controller.signal)
-      if (typeof onGenerated === "function") onGenerated(text, form, proposalUsage)
+      if (typeof onGenerated === 'function') onGenerated(text, form, proposalUsage)
     } catch (err) {
       if (err.name === 'AbortError') {
         setError('Request cancelled.')
@@ -98,10 +120,11 @@ export default function ProposalForm({ onGenerated, setLoading, loading }) {
                   key={tone.value}
                   type="button"
                   onClick={() => setForm(prev => ({ ...prev, tone: tone.value }))}
-                  className={`px-3 py-2 rounded-xl text-sm font-medium border transition-all ${form.tone === tone.value
+                  className={`px-3 py-2 rounded-xl text-sm font-medium border transition-all ${
+                    form.tone === tone.value
                       ? 'bg-blue-600/20 border-blue-500 text-blue-300'
                       : 'bg-slate-800/50 border-slate-700 text-slate-400 hover:border-slate-600'
-                    }`}
+                  }`}
                 >
                   {tone.emoji} {tone.label}
                 </button>
@@ -133,14 +156,26 @@ export default function ProposalForm({ onGenerated, setLoading, loading }) {
               maxLength={100}
             />
           </div>
+
+          {/* ── Skills field — now with resume upload above it ── */}
           <div>
-            <label className="block text-sm font-medium text-slate-300 mb-2">Skills</label>
+            <div className="flex items-center justify-between mb-2">
+              <label className="block text-sm font-medium text-slate-300">Skills</label>
+            </div>
+
+            {/* Resume upload + skill chips */}          {/* ← ADD THIS */}
+            <ResumeSkills
+              onSkillClick={handleSkillClick}
+              accessToken={accessToken}
+            />
+
+            {/* Skills text input */}
             <input
               name="skills"
               value={form.skills}
               onChange={handleChange}
               placeholder="React, SEO, HR..."
-              className="input"
+              className="input mt-2"
               maxLength={300}
             />
           </div>
@@ -149,7 +184,9 @@ export default function ProposalForm({ onGenerated, setLoading, loading }) {
         <div>
           <label className="block text-sm font-medium text-slate-300 mb-2">
             Job Description
-            <span className={`font-normal ml-2 ${form.jobDescription.length > MAX_JOB_DESC ? 'text-red-400' : 'text-slate-500'}`}>
+            <span className={`font-normal ml-2 ${
+              form.jobDescription.length > MAX_JOB_DESC ? 'text-red-400' : 'text-slate-500'
+            }`}>
               ({form.jobDescription.length}/{MAX_JOB_DESC})
             </span>
           </label>

@@ -1,13 +1,30 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>ProposalAI — Freelancer Proposal Writer</title>
     <meta name="description" content="AI-powered proposal and cold email writer for freelancers on Upwork, Fiverr, and PeoplePerHour." />
-    <link rel="preconnect" href="https://fonts.googleapis.com" />
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet" />
+    <title>ProposalAI — Freelancer Proposal Writer</title>
+
+    <!-- pdf.js for client-side PDF parsing (resume upload feature) -->
+    <!-- ↓ ADD THESE TWO LINES — nothing else changes in this file -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/4.4.168/pdf.min.mjs" type="module"></script>
+    <script>
+      // Make pdfjsLib available globally for ResumeSkills.jsx
+      // pdf.js 4.x uses ES modules — this shim exposes it on window
+      window.addEventListener('load', async () => {
+        try {
+          const pdfjsLib = await import('https://cdnjs.cloudflare.com/ajax/libs/pdf.js/4.4.168/pdf.min.mjs')
+          pdfjsLib.GlobalWorkerOptions.workerSrc =
+            'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/4.4.168/pdf.worker.min.mjs'
+          window.pdfjsLib = pdfjsLib
+        } catch(e) {
+          console.warn('pdf.js failed to load:', e)
+        }
+      })
+    </script>
+
   </head>
   <body>
     <div id="root"></div>
