@@ -1,8 +1,8 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { generateContent } from '../services/ai'
 import { TONES, PROPOSAL_TYPES, MAX_JOB_DESC, COOLDOWN_MS } from '../config/constants'
-import ResumeSkills from './ResumeSkills'                          // ← ADD THIS
-import { supabase } from '../services/auth'                        // ← ADD THIS
+import ResumeSkills from './Resumeskills'                          
+import { supabase } from '../services/auth'                        
 
 export default function ProposalForm({ onGenerated, setLoading, loading }) {
   const [form, setForm] = useState({
